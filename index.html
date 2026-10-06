@@ -142,9 +142,10 @@
       const address = document.getElementById('address').value;
       const requirements = document.getElementById('requirements').value;
 
-      let successCount = 0;
+      let dbErrorMsg = "";
+      let tgErrorMsg = "";
 
-      // 1. Try saving to Supabase
+      // 1. Supabase Insert
       try {
         const { error: dbError } = await supabaseClient
           .from('vision_ads')
@@ -157,15 +158,13 @@
           }]);
 
         if (dbError) {
-          console.error("Supabase Error:", dbError);
-        } else {
-          successCount++;
+          dbErrorMsg = dbError.message;
         }
       } catch (err) {
-        console.error("Supabase Exception:", err);
+        dbErrorMsg = err.message;
       }
 
-      // 2. Try sending Telegram Notification
+      // 2. Telegram Send
       try {
         const message = `🚀 New Vision Ads Inquiry!\n\n` +
                         `🏪 Shop: ${shopName}\n` +
@@ -180,24 +179,26 @@
           body: JSON.stringify({ chat_id: CHAT_ID, text: message })
         });
 
-        if (tgRes.ok) {
-          successCount++;
-        } else {
-          const tgErr = await tgRes.text();
-          console.error("Telegram Error:", tgErr);
+        if (!tgRes.ok) {
+          const tgText = await tgRes.text();
+          tgErrorMsg = `Telegram: ${tgText}`;
         }
       } catch (err) {
-        console.error("Telegram Exception:", err);
+        tgErrorMsg = `Telegram Exception: ${err.message}`;
       }
 
-      // Result
-      if (successCount > 0) {
-        statusDiv.innerText = '✅ সফলভাবে সাবমিট হয়েছে! খুব শীঘ্রই যোগাযোগ করা হবে।';
+      // Display Result / Exact Error
+      if (!dbErrorMsg && !tgErrorMsg) {
+        statusDiv.innerText = '✅ সফলভাবে সাবমিট হয়েছে!';
         statusDiv.className = 'mt-4 text-center text-sm font-semibold text-green-600 bg-green-50 p-2.5 rounded-xl border border-green-200';
         document.getElementById('visionForm').reset();
       } else {
-        statusDiv.innerText = '❌ ডাটা সেভ বা পাঠাতে সমস্যা হয়েছে। Supabase RLS Policy চেক করুন।';
-        statusDiv.className = 'mt-4 text-center text-sm font-semibold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200';
+        let fullError = "";
+        if (dbErrorMsg) fullError += `DB Error: ${dbErrorMsg} `;
+        if (tgErrorMsg) fullError += tgErrorMsg;
+
+        statusDiv.innerText = '❌ ' + fullError;
+        statusDiv.className = 'mt-4 text-center text-xs font-semibold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200 overflow-x-auto';
       }
 
       submitBtn.innerText = 'Submit Now';
