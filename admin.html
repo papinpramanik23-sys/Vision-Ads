@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Ads - Admin Panel</title>
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7fa; color: #333; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .container { width: 100%; max-width: 500px; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    h2 { text-align: center; color: #1a73e8; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+    input:focus, textarea:focus { border-color: #1a73e8; outline: none; }
+    button { width: 100%; background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button:hover { background: #1557b0; }
+    #status { text-align: center; margin-top: 15px; font-size: 14px; font-weight: bold; }
+    #loginScreen { text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div id="loginScreen" class="container">
+    <h2>Admin Login</h2>
+    <div class="form-group">
+      <input type="password" id="pinInput" placeholder="Enter PIN (1234)">
+    </div>
+    <button onclick="checkPin()">Login</button>
+    <p id="loginError" style="color: red; margin-top: 10px;"></p>
+  </div>
+
+  <!-- Admin Panel Dashboard -->
+  <div id="adminPanel" class="container" style="display: none;">
+    <h2>Vision Ads Admin Panel</h2>
+    <form id="adminForm" onsubmit="updateSettings(event)">
+      <div class="form-group">
+        <label>Business Name</label>
+        <input type="text" id="business_name" required>
+      </div>
+      <div class="form-group">
+        <label>Address</label>
+        <input type="text" id="address" required>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="text" id="phone" required>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" required>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="description" rows="3" required></textarea>
+      </div>
+      <div class="form-group">
+        <label>Logo URL</label>
+        <input type="text" id="logo_url" required>
+      </div>
+      <button type="submit">Update Website</button>
+    </form>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://dvlcqxcygzfbkpqjtkbd.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_4-Vjjs37LSUvOX1jK6qMJA_33KuW0V9';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const ADMIN_PIN = '1234';
+
+    function checkPin() {
+      const pin = document.getElementById('pinInput').value;
+      if (pin === ADMIN_PIN) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        loadCurrentData();
+      } else {
+        document.getElementById('loginError').innerText = 'Wrong PIN! Try 1234';
+      }
+    }
+
+    async function loadCurrentData() {
+      const { data, error } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+      if (data) {
+        document.getElementById('business_name').value = data.business_name || '';
+        document.getElementById('address').value = data.address || '';
+        document.getElementById('phone').value = data.phone || '';
+        document.getElementById('email').value = data.email || '';
+        document.getElementById('description').value = data.description || '';
+        document.getElementById('logo_url').value = data.logo_url || '';
+      }
+    }
+
+    async function updateSettings(e) {
+      e.preventDefault();
+      const status = document.getElementById('status');
+      status.innerText = 'Updating...';
+      status.style.color = 'blue';
+
+      const updatedData = {
+        business_name: document.getElementById('business_name').value,
+        address: document.getElementById('address').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        description: document.getElementById('description').value,
+        logo_url: document.getElementById('logo_url').value
+      };
+
+      const { error } = await supabaseClient.from('settings').update(updatedData).eq('id', 1);
+
+      if (error) {
+        status.innerText = 'Error: ' + error.message;
+        status.style.color = 'red';
+      } else {
+        status.innerText = 'Website updated successfully!';
+        status.style.color = 'green';
+      }
+    }
+  </script>
+</body>
+</html>
