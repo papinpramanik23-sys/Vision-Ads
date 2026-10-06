@@ -26,7 +26,7 @@
   <div id="loginScreen" class="container">
     <h2>Admin Login</h2>
     <div class="form-group">
-      <input type="password" id="pinInput" placeholder="Enter PIN (1234)">
+      <input type="password" id="pinInput" placeholder="Enter Admin PIN">
     </div>
     <button onclick="checkPin()">Login</button>
     <p id="loginError" style="color: red; margin-top: 10px;"></p>
@@ -69,6 +69,8 @@
     const SUPABASE_URL = 'https://dvlcqxcygzfbkpqjtkbd.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_4-Vjjs37LSUvOX1jK6qMJA_33KuW0V9';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Apni ekhane '1234'-er jaigai apnar ichchhemoto gopon PIN set kore nite parben
     const ADMIN_PIN = '1234';
 
     function checkPin() {
@@ -78,7 +80,7 @@
         document.getElementById('adminPanel').style.display = 'block';
         loadCurrentData();
       } else {
-        document.getElementById('loginError').innerText = 'Wrong PIN! Try 1234';
+        document.getElementById('loginError').innerText = 'Wrong PIN! Please try again.';
       }
     }
 
