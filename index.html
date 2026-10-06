@@ -83,7 +83,7 @@
 
     <div id="status" class="mt-4 text-center text-sm font-semibold"></div>
 
-    <!-- ABOUT US SECTION (Live data from Supabase) -->
+    <!-- ABOUT US SECTION -->
     <div class="mt-8 pt-6 border-t border-dashed border-orange-200 text-center" id="about-section">
       <img id="dbLogo" src="https://via.placeholder.com/80" alt="Logo" class="w-16 h-16 mx-auto rounded-full object-cover mb-2 border border-orange-200 shadow-sm">
       <h3 id="dbBusinessName" class="font-bold text-lg text-gray-900">Vision Ads</h3>
@@ -100,7 +100,6 @@
   </footer>
 
   <script>
-    // --- CONFIGURATION ---
     const SUPABASE_URL = 'https://dvlcqxcygzfbkpqjtkbd.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_4-Vjjs37LSUvOX1jK6qMJA_33KuW0V9';
     
@@ -109,19 +108,16 @@
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Load About Us Info from Supabase on Page Load
     async function loadAboutUs() {
       try {
-        const { data, error } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+        const { data } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
         if (data) {
           document.getElementById('dbBusinessName').innerText = data.business_name || 'Vision Ads';
           document.getElementById('dbAddress').innerText = data.address || '';
           document.getElementById('dbPhone').innerText = data.phone || '';
           document.getElementById('dbEmail').innerText = data.email || '';
           document.getElementById('dbDesc').innerText = data.description || '';
-          if (data.logo_url) {
-            document.getElementById('dbLogo').src = data.logo_url;
-          }
+          if (data.logo_url) document.getElementById('dbLogo').src = data.logo_url;
         }
       } catch (err) {
         console.error('Error loading settings:', err);
@@ -130,7 +126,6 @@
 
     loadAboutUs();
 
-    // Form Submit to Supabase Database & Telegram Notification
     document.getElementById('visionForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       
@@ -147,8 +142,10 @@
       const address = document.getElementById('address').value;
       const requirements = document.getElementById('requirements').value;
 
+      let successCount = 0;
+
+      // 1. Try saving to Supabase
       try {
-        // 1. Save data to Supabase table (vision_ads)
         const { error: dbError } = await supabaseClient
           .from('vision_ads')
           .insert([{ 
@@ -159,9 +156,17 @@
             requirements: requirements 
           }]);
 
-        if (dbError) throw dbError;
+        if (dbError) {
+          console.error("Supabase Error:", dbError);
+        } else {
+          successCount++;
+        }
+      } catch (err) {
+        console.error("Supabase Exception:", err);
+      }
 
-        // 2. Send Telegram Notification
+      // 2. Try sending Telegram Notification
+      try {
         const message = `🚀 New Vision Ads Inquiry!\n\n` +
                         `🏪 Shop: ${shopName}\n` +
                         `👤 Owner: ${ownerName}\n` +
@@ -169,28 +174,34 @@
                         `📍 Address: ${address}\n` +
                         `💬 Details: ${requirements}`;
 
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: CHAT_ID,
-            text: message
-          })
+          body: JSON.stringify({ chat_id: CHAT_ID, text: message })
         });
 
-        // Success response
+        if (tgRes.ok) {
+          successCount++;
+        } else {
+          const tgErr = await tgRes.text();
+          console.error("Telegram Error:", tgErr);
+        }
+      } catch (err) {
+        console.error("Telegram Exception:", err);
+      }
+
+      // Result
+      if (successCount > 0) {
         statusDiv.innerText = '✅ সফলভাবে সাবমিট হয়েছে! খুব শীঘ্রই যোগাযোগ করা হবে।';
         statusDiv.className = 'mt-4 text-center text-sm font-semibold text-green-600 bg-green-50 p-2.5 rounded-xl border border-green-200';
         document.getElementById('visionForm').reset();
-
-      } catch (err) {
-        console.error(err);
-        statusDiv.innerText = '❌ পাঠাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।';
+      } else {
+        statusDiv.innerText = '❌ ডাটা সেভ বা পাঠাতে সমস্যা হয়েছে। Supabase RLS Policy চেক করুন।';
         statusDiv.className = 'mt-4 text-center text-sm font-semibold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200';
-      } finally {
-        submitBtn.innerText = 'Submit Now';
-        submitBtn.disabled = false;
       }
+
+      submitBtn.innerText = 'Submit Now';
+      submitBtn.disabled = false;
     });
   </script>
 </body>
